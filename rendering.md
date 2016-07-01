@@ -56,7 +56,7 @@ Let's simulate the user typing in some text through time by using the `insertCha
 defined previously:
 
 ```javascript
-const userInput = `This is some amazing text! Let's see how our view shows it...`;
+const userInput = `This is some amazing text!`;
 let index = 0;
 const interval = setInterval(() => {
   // if we still have text to process
@@ -100,6 +100,40 @@ connected to our store and listening for data changes, so it's our responsibilit
 don't waste the user's computational resources in operations that don't need to happen in the first
 place and leave room for those who do.
 
+Let's expand our fake user interaction from above to include some other type of actions being
+dispatched from time to time:
+
+```javascript
+const userInput = `This is some amazing text!`;
+let index = 0;
+// our random tracker
+let nextIsRandom = false;
+const interval = setInterval(() => {
+  // if we still have text to process
+  if (index < userInput.length) {
+    if (nextIsRandom) {
+      // tell the reducer to add the character
+      store.dispatch({
+        type: 'RANDOM'
+      });
+
+      nextIsRandom = false;
+    } else {
+      // tell the reducer to add the character
+      store.dispatch(insertCharacter(userInput[index++]));
+
+      // flag every fifth character to be random
+      nextIsRandom = index % 5 === 0;
+    }
+  } else {
+    // otherwise stop
+    clearInterval(interval);
+  }
+  // do this every 0.25 seconds (or 250ms)
+}, 250);
+```
+
+
 In order to do so we'll need to keep track of data changes in order to determine whether we should
 render or not. Our render function seems like a great candidate for it since it already takes care
 of getting the data and rendering it. Let's refactor it then!
@@ -120,3 +154,5 @@ function render() {
   }
 }
 ```
+
+To simulate this

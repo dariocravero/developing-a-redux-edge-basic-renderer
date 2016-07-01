@@ -36,14 +36,29 @@ store.subscribe(render);
 
 const userInput = `This is some amazing text!`;
 let index = 0;
+// our random tracker
+let nextIsRandom = false;
 const interval = setInterval(() => {
   // if we still have text to process
   if (index < userInput.length) {
-    // tell the reducer to add the character
-    store.dispatch(insertCharacter(userInput[index++]));
+    if (nextIsRandom) {
+      // tell the reducer to add the character
+      store.dispatch({
+        type: 'RANDOM'
+      });
+
+      nextIsRandom = false;
+    } else {
+      // tell the reducer to add the character
+      store.dispatch(insertCharacter(userInput[index++]));
+
+      // flag every fifth character to be random
+      nextIsRandom = index % 5 === 0;
+    }
   } else {
     // otherwise stop
     clearInterval(interval);
   }
   // do this every 0.25 seconds (or 250ms)
 }, 250);
+
