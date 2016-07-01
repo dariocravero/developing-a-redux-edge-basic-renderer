@@ -1,0 +1,13 @@
+{
+  "name": "rendering",
+  "version": "1.0.0",
+  "description": "",
+  "main": "basic.js",
+  "dependencies": {},
+  "devDependencies": {},
+  "scripts": {
+    "start": "rollup -c rollup.config.js basic.js | node"
+  },
+  "author": "Darío Javier Cravero <dario@uxtemple.com>",
+  "license": "MIT"
+}
