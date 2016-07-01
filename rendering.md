@@ -325,7 +325,8 @@ give it the freedom to define them. We will use functions to achieve that.
 As a rough first approximation we could probably say that such connector's function signature
 could be along the lines of:
 ```javascript
-connect(ComponentToConnect: ReactComponent, mapState: Function, actionsToDispatch: Object)
+connect(ComponentToConnect: ReactComponent, mapState: Function, actionsToDispatch: Object) :
+ReactComponent
 ```
 
 Ideally we would wrap our view in this connected component with something like this:
@@ -497,4 +498,84 @@ render(
 );
 ```
 
-// show that we've just built react-redux
+Let's recap what we've done so far. We started with a React component that was doing everything from
+getting new data from the store to rendering it. We gradually extracted the key pieces until we got
+to three main concepts: `Provider`, `connect` and our `View`. In short, `Provider` is our bridge
+to tell `connect` which store to use when a `View` uses it.
+
+Luckily for us, the redux community has already sorted this problem and packaged it into
+`react-redux`. The solution is quite similar to what we got to with a difference in how `connect`
+works, which instead of having a signature like:
+
+```javascript
+connect(ComponentToConnect: ReactComponent, mapState: Function, actionsToDispatch: Object) :
+ReactComponent
+```
+
+it has:
+
+```javascript
+connect(mapStateToProps: Function, mapDispatchToProps: Object | Function) : Function
+// the returned Function has a signature of
+connected(ComponentToConnect: ReactComponent) : ReactComponent
+
+// mapStateToProps has the following signature
+mapStateToProps(state: Object, props: Object) : Object
+
+// mapDispatchToProps is generally used in one of two ways
+// by providing a function that gets a dispatch method and you're in charge of mapping to an object,
+// this is handy if you need to transform data before passing it into the action creator before
+// calling it
+mapDispatchToProps(dispatch: Object, props: Object) : Object
+// or it takes an object with actions that the library will auto-map to dispatch as we did in our
+// example above
+mapDispatchToProps = actions: Object
+```
+
+In order to use `react-redux`, the only change we need to make to our View is on the connected
+component:
+
+```javascript
+const ConnectedComponent = connect(
+  // the piece of the state we want to get back
+  state => ({
+    text: state
+  }),
+  // the actions that we want to dispatch
+  {
+    insertCharacter,
+    removeCharacter
+  }
+)(View);
+```
+
+In practice, it is a good idea to extract `mapStateToProps` and `mapDispatchToProps` into their
+own functions so that they're easier to read. So the example above would look like:
+
+```javascript
+const mapStateToProps = state => ({
+  text: state
+});
+
+const mapDispatchToProps = {
+  insertCharacter,
+  removeCharacter
+};
+
+const ConnectedComponent = connect(mapStateToProps, mapDispatchToProps)(View);
+```
+
+This also allows us to easily test both functions in isolation:
+```javascript
+test('mapStateToProps', ({ end, deepEquals }) => {
+  deepEquals(
+    mapStateToProps('TEXT'),
+    { text: 'TEXT' }
+  );
+
+  end();
+});
+```
+
+In future chapters we will dive into how to use state selectors within `mapStateToProps` to
+achieve a more idiomatic definition and in many cases get performance gains while rendering.

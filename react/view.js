@@ -1,7 +1,6 @@
+import { connect, Provider } from 'react-redux';
 import { insertCharacter, removeCharacter, store } from './store';
 import { render } from 'react-dom';
-import connect from './connect';
-import Provider from './provider';
 import React, { Component, PropTypes } from 'react';
 
 class View extends Component {
@@ -72,20 +71,16 @@ View.propTypes = {
   text: PropTypes.string.isRequired
 };
 
-const ConnectedComponent = connect(
-  // the component we want to connect
-  View,
-  // the piece of the state we want to get back
-  state => ({
-    text: state
-  }),
-  // our actions ready to be dispatched
-  {
-    insertCharacter,
-    removeCharacter
-  }
-);
+const mapStateToProps = state => ({
+  text: state
+});
 
+const mapDispatchToProps = {
+  insertCharacter,
+  removeCharacter
+};
+
+const ConnectedComponent = connect(mapStateToProps, mapDispatchToProps)(View);
 
 render(
   <Provider store={store}>
