@@ -192,7 +192,7 @@ class View extends Component {
     };
 
     // subscribe to changes and set the component's state when anything changes
-    this.subscription = store.subscribe(() => {
+    this.cancelSubscription = store.subscribe(() => {
       this.setState({
         text: store.getState()
       });
@@ -207,6 +207,8 @@ class View extends Component {
   componentWillUnmount() {
     // clean up our binding to keydown on the document
     document.removeEventListener('keyup', this.onCharacter);
+    // also clean up our subscription to the storee
+    this.cancelSubscription();
   }
 
   onCharacter(event) {
@@ -252,25 +254,152 @@ Our React component above abstracts the complexity of dealing with the redux sto
 application grows, connecting to the store will become a repetitive task and, if repeated along
 across components, it will make our logic more complex and error prone.
 It is also a good practice to try and keep our React components as stateless as possible, e.g., our
-component above could have been as simple as:
-
-```javascript
-const View = ({ text }) => <div>{text}</div>;
-```
+component above could have been as simple as: `const View = ({ text }) => <div>{text}</div>`.
 
 That makes it easier to test it and to separate concerns as we can compose that component more
 easily.
 
-There are three key parts to our
-Let's go ahead and extract into its own set of reusable
+There are two key parts to our component:
+1) knowing that we have a redux store, connecting to that store and updating the view with its
+changes, and
+2) rendering the text on screen as the user types
 
-// extract into Provider and connect
+Let's separate those into their own components, shall we?
 
-// show that we've just built react-redux
+Our View needs to know that a new key was pressed and tell the store about it; it also needs to
+render the current text. That translates to roughly the following component:
 
+```javascript
+import React, { Component, PropTypes } from 'react';
 
-  shouldComponentUpdate(nextProps, nextState) {
-    // whenever react detects either a change in props or state, it will 
-    return this.state !== nextState;
+class View extends Component {
+  constructor(props) {
+    super(props);
+    this.onCharacter = this.onCharacter.bind(this);
+    // listen to keystrokes in the 
+    document.addEventListener('keyup', this.onCharacter);
   }
 
+  componentWillUnmount() {
+    // clean up our binding to keydown on the document
+    document.removeEventListener('keyup', this.onCharacter);
+  }
+
+  onCharacter(event) {
+    const { props } = this;
+
+    if (event.key === 'Backspace') {
+      // if the user pressed the backspace, remove the last character
+      props.removeCharacter();
+    } else if (event.key.length === 1) {
+      // otherwise, when a keystroke came our way, add it!
+      props.insertCharacter(event.key);
+    }
+  }
+
+  render() {
+    const { text } = this.props;
+
+    return (
+      <div>
+        {text}
+      </div>
+    );
+  }
+}
+View.propTypes = {
+  insertCharacter: PropTypes.func.isRequired,
+  removeCharacter: PropTypes.func.isRequired,
+  text: PropTypes.string.isRequired
+};
+```
+
+Notice how our View now doesn't take a `store` as props anymore but instead it takes `text` and
+functions to insert and remove characters. Congratulations! As it doesn't know anything about the
+store, we've just made our component reusable!
+
+Now it's time for our store connector. We know that we have to send the view a part of the state
+and some functions that will eventually dispatch an action in our store.
+Because we can't be certain as to what part of the state or actions our view will need, we should
+give it the freedom to define them. We will use functions to achieve that.
+As a rough first approximation we could probably say that such connector's function signature
+could be along the lines of:
+```javascript
+connect(ComponentToConnect: ReactComponent, mapState: Function, actionsToDispatch: Object)
+```
+
+Ideally we would wrap our view in this connected component with something like this:
+
+```javascript
+connect(
+  // the component we want to connect
+  View,
+  // the piece of the state we want to get back
+  state => ({
+    text: state
+  }),
+  // the actions that we want to dispatch
+  {
+    insertCharacter,
+    removeCharacter
+  }
+);
+```
+
+Now that we now how we would want to use it, let's try and implement our `connect` function!
+
+```javascript
+function connect(ComponentToConnect, mapState, actionsToDispatch) {
+  class ConnectedComponent extends Component {
+    constructor(props) {
+      super(props);
+
+      // the store comes as a prop to our component
+      const { store } = props;
+
+      // get the initial state from the store
+      this.state = store.getState();
+
+      // subscribe to changes and set the component's state when anything changes
+      this.cancelSubscription = store.subscribe(() => {
+        this.setState(store.getState());
+      });
+
+      // map the actions that the view wants to dispatch to the store
+      this.actions = {};
+      Object.keys(actionsToDispatch).forEach(action => {
+        this.actions[action] = (...args) => {
+          store.dispatch(
+            actionsToDispatch[action](...args)
+          )
+        };
+      });
+    }
+
+    componentWillUnmount() {
+      // clean up our subscription to the storee
+      this.cancelSubscription();
+    }
+    render() {
+      // our component should be invisible so we should proxy the props that we get from above
+      // and the sliced state that we captured from our store and filtered as the view wanted
+      return <ComponentToConnect {...this.props} {...this.state} />;
+    }
+  }
+
+  // tell React that we're expecting a redux store like prop called store
+  ConnectedComponent.propTypes = {
+    store: PropTypes.shape({
+      dispatch: PropTypes.func.isRequired,
+      getState: PropTypes.func.isRequired,
+      subscribe: PropTypes.func.isRequired
+    })
+  };
+
+  return ConnectedComponent;
+}
+```
+
+// extract into Provider because of reusability of the store without having to pass it as props
+
+// show that we've just built react-redux

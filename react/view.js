@@ -1,28 +1,12 @@
 import { insertCharacter, removeCharacter, store } from './store';
 import { render } from 'react-dom';
+import connect from './connect';
 import React, { Component, PropTypes } from 'react';
 
 class View extends Component {
   constructor(props) {
     super(props);
-
-    // the store comes as a prop to our component
-    const { store } = props;
-
-    // get the initial state from the store
-    this.state = {
-      text: store.getState()
-    };
-
-    // subscribe to changes and set the component's state when anything changes
-    this.cancelSubscription = store.subscribe(() => {
-      this.setState({
-        text: store.getState()
-      });
-    });
-
     this.onCharacter = this.onCharacter.bind(this);
-
     // listen to keystrokes in the 
     document.addEventListener('keyup', this.onCharacter);
   }
@@ -30,24 +14,22 @@ class View extends Component {
   componentWillUnmount() {
     // clean up our binding to keydown on the document
     document.removeEventListener('keyup', this.onCharacter);
-    // also clean up our subscription to the storee
-    this.cancelSubscription();
   }
 
   onCharacter(event) {
-    const { dispatch } = this.props.store;
+    const { props } = this;
 
     if (event.key === 'Backspace') {
       // if the user pressed the backspace, remove the last character
-      dispatch(removeCharacter());
+      props.removeCharacter();
     } else if (event.key.length === 1) {
       // otherwise, when a keystroke came our way, add it!
-      dispatch(insertCharacter(event.key));
+      props.insertCharacter(event.key);
     }
   }
 
   render() {
-    const { text } = this.state;
+    const { text } = this.props;
 
     return (
       <div
@@ -84,14 +66,27 @@ class View extends Component {
   }
 }
 View.propTypes = {
-  store: PropTypes.shape({
-    dispatch: PropTypes.func.isRequired,
-    getState: PropTypes.func.isRequired,
-    subscribe: PropTypes.func.isRequired
-  })
+  insertCharacter: PropTypes.func.isRequired,
+  removeCharacter: PropTypes.func.isRequired,
+  text: PropTypes.string.isRequired
 };
 
+const ConnectedComponent = connect(
+  // the component we want to connect
+  View,
+  // the piece of the state we want to get back
+  state => ({
+    text: state
+  }),
+  // our actions ready to be dispatched
+  {
+    insertCharacter,
+    removeCharacter
+  }
+);
+
+
 render(
-  <View store={store} />,
+  <ConnectedComponent store={store} />,
   document.getElementById('root')
 );

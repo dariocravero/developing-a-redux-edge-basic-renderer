@@ -20516,29 +20516,81 @@ var reducer = function (state, action) {
 }
 var store = redux.createStore(reducer);
 
-var View = (function (Component) {
-  function View(props) {
-    var this$1 = this;
+function connect(ComponentToConnect, mapState, actionsToDispatch) {
+  var ConnectedComponent = (function (Component) {
+    function ConnectedComponent(props) {
+      var this$1 = this;
 
-    Component.call(this, props);
+      Component.call(this, props);
 
-    // the store comes as a prop to our component
-    var store = props.store;
+      // the store comes as a prop to our component
+      var store = props.store;
 
-    // get the initial state from the store
-    this.state = {
-      text: store.getState()
+      // get the initial state from the store
+      this.state = mapState(
+        store.getState()
+      );
+
+      // subscribe to changes and set the component's state when anything changes
+      this.cancelSubscription = store.subscribe(function () {
+        this$1.setState(
+          // map the state to what the view requested
+          mapState(
+            store.getState()
+          )
+        );
+      });
+
+      // map the actions that the view wants to dispatch to the store
+      this.actions = {};
+      Object.keys(actionsToDispatch).forEach(function (action) {
+        this$1.actions[action] = function () {
+          var args = [], len = arguments.length;
+          while ( len-- ) args[ len ] = arguments[ len ];
+
+          store.dispatch(
+            actionsToDispatch[action].apply(actionsToDispatch, args)
+          )
+        };
+      });
+    }
+
+    if ( Component ) ConnectedComponent.__proto__ = Component;
+    ConnectedComponent.prototype = Object.create( Component && Component.prototype );
+    ConnectedComponent.prototype.constructor = ConnectedComponent;
+
+    ConnectedComponent.prototype.componentWillUnmount = function componentWillUnmount () {
+      // clean up our subscription to the storee
+      this.cancelSubscription();
     };
 
-    // subscribe to changes and set the component's state when anything changes
-    this.subscription = store.subscribe(function () {
-      this$1.setState({
-        text: store.getState()
-      });
-    });
+    ConnectedComponent.prototype.render = function render () {
+      // our component should be invisible so we should proxy the props that we get from above,
+      // we will also pass the sliced state that we captured from our store and filtered as the
+      // view wanted, and
+      // we will pass the actions ready to be dispatched
+      return React__default.createElement( ComponentToConnect, Object.assign({}, this.props, this.state, this.actions));
+    };
 
+    return ConnectedComponent;
+  }(React.Component));
+
+  // tell React that we're expecting a redux store like prop called store
+  ConnectedComponent.propTypes = {
+    store: React.PropTypes.shape({
+      dispatch: React.PropTypes.func.isRequired,
+      getState: React.PropTypes.func.isRequired,
+      subscribe: React.PropTypes.func.isRequired
+    })
+  };
+
+  return ConnectedComponent;
+}
+
+var View = (function (Component) {
+  function View(props) {
+    Component.call(this, props);
     this.onCharacter = this.onCharacter.bind(this);
-
     // listen to keystrokes in the 
     document.addEventListener('keyup', this.onCharacter);
   }
@@ -20553,20 +20605,20 @@ var View = (function (Component) {
   };
 
   View.prototype.onCharacter = function onCharacter (event) {
-    var ref = this.props.store;
-    var dispatch = ref.dispatch;
+    var ref = this;
+    var props = ref.props;
 
     if (event.key === 'Backspace') {
       // if the user pressed the backspace, remove the last character
-      dispatch(removeCharacter());
+      props.removeCharacter();
     } else if (event.key.length === 1) {
       // otherwise, when a keystroke came our way, add it!
-      dispatch(insertCharacter(event.key));
+      props.insertCharacter(event.key);
     }
   };
 
   View.prototype.render = function render$1 () {
-    var ref = this.state;
+    var ref = this.props;
     var text = ref.text;
 
     return (
@@ -20601,15 +20653,28 @@ var View = (function (Component) {
   return View;
 }(React.Component));
 View.propTypes = {
-  store: React.PropTypes.shape({
-    dispatch: React.PropTypes.func.isRequired,
-    getState: React.PropTypes.func.isRequired,
-    subscribe: React.PropTypes.func.isRequired
-  })
+  insertCharacter: React.PropTypes.func.isRequired,
+  removeCharacter: React.PropTypes.func.isRequired,
+  text: React.PropTypes.string.isRequired
 };
 
+var ConnectedComponent = connect(
+  // the component we want to connect
+  View,
+  // the piece of the state we want to get back
+  function (state) { return ({
+    text: state
+  }); },
+  // our actions ready to be dispatched
+  {
+    insertCharacter: insertCharacter,
+    removeCharacter: removeCharacter
+  }
+);
+
+
 reactDom.render(
-  React__default.createElement( View, { store: store }),
+  React__default.createElement( ConnectedComponent, { store: store }),
   document.getElementById('root')
 );
 },{"react":171,"react-dom":33,"redux":177}]},{},[181]);
