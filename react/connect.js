@@ -2,11 +2,11 @@ import React, { Component, PropTypes } from 'react';
 
 export default function connect(ComponentToConnect, mapState, actionsToDispatch) {
   class ConnectedComponent extends Component {
-    constructor(props) {
-      super(props);
+    constructor(props, context) {
+      super(props, context);
 
       // the store comes as a prop to our component
-      const { store } = props;
+      const { store } = context;
 
       // get the initial state from the store
       this.state = mapState(
@@ -49,7 +49,7 @@ export default function connect(ComponentToConnect, mapState, actionsToDispatch)
   }
 
   // tell React that we're expecting a redux store like prop called store
-  ConnectedComponent.propTypes = {
+  ConnectedComponent.contextTypes = {
     store: PropTypes.shape({
       dispatch: PropTypes.func.isRequired,
       getState: PropTypes.func.isRequired,

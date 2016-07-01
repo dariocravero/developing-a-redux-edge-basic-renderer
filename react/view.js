@@ -1,6 +1,7 @@
 import { insertCharacter, removeCharacter, store } from './store';
 import { render } from 'react-dom';
 import connect from './connect';
+import Provider from './provider';
 import React, { Component, PropTypes } from 'react';
 
 class View extends Component {
@@ -87,6 +88,8 @@ const ConnectedComponent = connect(
 
 
 render(
-  <ConnectedComponent store={store} />,
+  <Provider store={store}>
+    <ConnectedComponent />
+  </Provider>,
   document.getElementById('root')
 );

@@ -180,8 +180,8 @@ import { render } from 'react-dom';
 import React, { Component, PropTypes } from 'react';
 
 class View extends Component {
-  constructor(props) {
-    super(props);
+  constructor(props, context) {
+    super(props, context);
 
     // the store comes as a prop to our component
     const { store } = props;
@@ -240,7 +240,7 @@ View.propTypes = {
     dispatch: PropTypes.func.isRequired,
     getState: PropTypes.func.isRequired,
     subscribe: PropTypes.func.isRequired
-  })
+  }).isRequired
 };
 
 // render our component
@@ -273,8 +273,8 @@ render the current text. That translates to roughly the following component:
 import React, { Component, PropTypes } from 'react';
 
 class View extends Component {
-  constructor(props) {
-    super(props);
+  constructor(props, context) {
+    super(props, context);
     this.onCharacter = this.onCharacter.bind(this);
     // listen to keystrokes in the 
     document.addEventListener('keyup', this.onCharacter);
@@ -331,7 +331,7 @@ connect(ComponentToConnect: ReactComponent, mapState: Function, actionsToDispatc
 Ideally we would wrap our view in this connected component with something like this:
 
 ```javascript
-connect(
+const ConnectedComponent = connect(
   // the component we want to connect
   View,
   // the piece of the state we want to get back
@@ -351,8 +351,8 @@ Now that we now how we would want to use it, let's try and implement our `connec
 ```javascript
 function connect(ComponentToConnect, mapState, actionsToDispatch) {
   class ConnectedComponent extends Component {
-    constructor(props) {
-      super(props);
+    constructor(props, context) {
+      super(props, context);
 
       // the store comes as a prop to our component
       const { store } = props;
@@ -393,13 +393,108 @@ function connect(ComponentToConnect, mapState, actionsToDispatch) {
       dispatch: PropTypes.func.isRequired,
       getState: PropTypes.func.isRequired,
       subscribe: PropTypes.func.isRequired
-    })
+    }).isRequired
   };
 
   return ConnectedComponent;
 }
 ```
 
-// extract into Provider because of reusability of the store without having to pass it as props
+We're almost set! Our components are now rendering and they are isolated from our redux store.
+There's one issue though, as we go deeper into our React tree, we would have to remember to pass
+down the `store` prop so that every other component can also connect to it.
+This quickly becomes very tedious and error prone as it's very easy to forget to pass the store
+every time, needless to say that it makes your components' logic muddy right away.
+
+There's one more refactor that we can make: we can use React's context to make the store only be
+available to views in the React tree at request. This would allow us to forget about passing down
+the store prop and it will define the scope for our connection with redux very well as only the
+the connect function will need to know about it. Win-win! Let's see how this root store provider
+would look like:
+
+```javascript
+import { Children, Component, PropTypes } from 'react';
+
+class Provider extends Component {
+  constructor(props, context) {
+    super(props, context);
+    // get the store from the props
+    this.store = props.store;
+  }
+
+  // expose the store as a child context for components that request it
+  getChildContext() {
+    return {
+      store: this.store
+    };
+  }
+
+  // only take one children and render it
+  render() {
+    return Children.only(this.props.children);
+  }
+}
+
+// define the props that we take as a component
+Provider.propTypes = {
+  store: PropTypes.shape({
+    dispatch: PropTypes.func.isRequired,
+    getState: PropTypes.func.isRequired,
+    subscribe: PropTypes.func.isRequired
+  }).isRequired,
+  children: PropTypes.element.isRequired
+};
+// define the prop types that children can claim through context
+Provider.childContextTypes = {
+  store: PropTypes.shape({
+    dispatch: PropTypes.func.isRequired,
+    getState: PropTypes.func.isRequired,
+    subscribe: PropTypes.func.isRequired
+  }).isRequired
+};
+```
+
+Our connector also has to be refactored so that it gets its store from the context instead its
+props.
+
+```javascript
+function connect(ComponentToConnect, mapState, actionsToDispatch) {
+  class ConnectedComponent extends Component {
+    constructor(props, context) {
+      super(props, context);
+
+      // the store comes as a prop to our component
+      const { store } = context;
+
+      // ...omitted for brevity
+    }
+
+    // ...omitted for brevity
+  }
+
+  // notice how we declare contextTypes instead of propTypes here
+  ConnectedComponent.contextTypes = {
+    store: PropTypes.shape({
+      dispatch: PropTypes.func.isRequired,
+      getState: PropTypes.func.isRequired,
+      subscribe: PropTypes.func.isRequired
+    }).isRequired
+  };
+
+  return ConnectedComponent;
+}
+```
+
+Now in our final render method, we wrap our component with the Provider passing the store as its
+prop:
+
+```javascript
+render(
+  <Provider store={store}>
+    <ConnectedComponent />
+  </Provider>,
+  document.getElementById('root')
+);
+```
 
 // show that we've just built react-redux

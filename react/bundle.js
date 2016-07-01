@@ -20518,13 +20518,13 @@ var store = redux.createStore(reducer);
 
 function connect(ComponentToConnect, mapState, actionsToDispatch) {
   var ConnectedComponent = (function (Component) {
-    function ConnectedComponent(props) {
+    function ConnectedComponent(props, context) {
       var this$1 = this;
 
-      Component.call(this, props);
+      Component.call(this, props, context);
 
       // the store comes as a prop to our component
-      var store = props.store;
+      var store = context.store;
 
       // get the initial state from the store
       this.state = mapState(
@@ -20576,7 +20576,7 @@ function connect(ComponentToConnect, mapState, actionsToDispatch) {
   }(React.Component));
 
   // tell React that we're expecting a redux store like prop called store
-  ConnectedComponent.propTypes = {
+  ConnectedComponent.contextTypes = {
     store: React.PropTypes.shape({
       dispatch: React.PropTypes.func.isRequired,
       getState: React.PropTypes.func.isRequired,
@@ -20586,6 +20586,50 @@ function connect(ComponentToConnect, mapState, actionsToDispatch) {
 
   return ConnectedComponent;
 }
+
+var Provider = (function (Component) {
+  function Provider(props, context) {
+    Component.call(this, props, context);
+    // get the store from the props
+    this.store = props.store;
+  }
+
+  if ( Component ) Provider.__proto__ = Component;
+  Provider.prototype = Object.create( Component && Component.prototype );
+  Provider.prototype.constructor = Provider;
+
+  // expose the store as a child context for components that request it
+  Provider.prototype.getChildContext = function getChildContext () {
+    return {
+      store: this.store
+    };
+  };
+
+  // only take one children and render it
+  Provider.prototype.render = function render () {
+    return React.Children.only(this.props.children);
+  };
+
+  return Provider;
+}(React.Component));
+
+// define the props that we take as a component
+Provider.propTypes = {
+  store: React.PropTypes.shape({
+    dispatch: React.PropTypes.func.isRequired,
+    getState: React.PropTypes.func.isRequired,
+    subscribe: React.PropTypes.func.isRequired
+  }).isRequired,
+  children: React.PropTypes.element.isRequired
+};
+// define the prop types that children can claim through context
+Provider.childContextTypes = {
+  store: React.PropTypes.shape({
+    dispatch: React.PropTypes.func.isRequired,
+    getState: React.PropTypes.func.isRequired,
+    subscribe: React.PropTypes.func.isRequired
+  }).isRequired
+};
 
 var View = (function (Component) {
   function View(props) {
@@ -20674,7 +20718,9 @@ var ConnectedComponent = connect(
 
 
 reactDom.render(
-  React__default.createElement( ConnectedComponent, { store: store }),
+  React__default.createElement( Provider, { store: store },
+    React__default.createElement( ConnectedComponent, null )
+  ),
   document.getElementById('root')
 );
 },{"react":171,"react-dom":33,"redux":177}]},{},[181]);
