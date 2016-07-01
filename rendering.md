@@ -1,4 +1,4 @@
-# Rendering
+## Connecting redux to our UI
 
 We now have a way to understand how our app changes in a structured way, we need to display that
 somehow and interact with our user.
@@ -8,7 +8,7 @@ gradually transition to `React` and its official binding with `redux`: `react-re
 Understanding how the mechanism works from scratch allows us to connect our data in a more sensible
 way going forward and detect potential bottlenecks, etc.
 
-## The basic renderer
+### The basic renderer
 Continuing with our example above, we'll write a view function that show characters as we type them.
 Let's define our basic renderer:
 
@@ -162,3 +162,115 @@ function render() {
 
 Our output should look exactly the same as it did before the introduction of an extra action being
 dispatched.
+
+### The path to React
+
+Now that we know the basics of rendering our potential UI with redux, let's get that editor into a
+more useful renderer like React. This time, instead of faking the user's input we'll actually listen
+to what they type on the screen.
+
+In our previous example both, the subscription to the redux store and the reference to the previous
+text were part of our scope. React allows us to encapsulate that within a component which makes it
+easier to reuse, let's do that instead. It's refactor time!
+
+```javascript
+// we've extracted the store into its own file for this example
+import { insertCharacter, removeCharacter, store } from './store';
+import { render } from 'react-dom';
+import React, { Component, PropTypes } from 'react';
+
+class View extends Component {
+  constructor(props) {
+    super(props);
+
+    // the store comes as a prop to our component
+    const { store } = props;
+
+    // get the initial state from the store
+    this.state = {
+      text: store.getState()
+    };
+
+    // subscribe to changes and set the component's state when anything changes
+    this.subscription = store.subscribe(() => {
+      this.setState({
+        text: store.getState()
+      });
+    });
+
+    this.onCharacter = this.onCharacter.bind(this);
+
+    // listen to keystrokes in the 
+    document.addEventListener('keyup', this.onCharacter);
+  }
+
+  componentWillUnmount() {
+    // clean up our binding to keydown on the document
+    document.removeEventListener('keyup', this.onCharacter);
+  }
+
+  onCharacter(event) {
+    const { dispatch } = this.props.store;
+
+    if (event.key === 'Backspace') {
+      // if the user pressed the backspace, remove the last character
+      dispatch(removeCharacter());
+    } else if (event.key.length === 1) {
+      // otherwise, when a keystroke came our way, add it!
+      dispatch(insertCharacter(event.key));
+    }
+  }
+
+  render() {
+    const { text } = this.state;
+
+    // the example includes styles that are omitted for brevity
+    return (
+      <div>
+        {text}
+      </div>
+    );
+  }
+}
+// tell React that we're expecting a redux store like prop called store
+View.propTypes = {
+  store: PropTypes.shape({
+    dispatch: PropTypes.func.isRequired,
+    getState: PropTypes.func.isRequired,
+    subscribe: PropTypes.func.isRequired
+  })
+};
+
+// render our component
+render(
+  <View store={store} />,
+  document.body
+);
+```
+
+Our React component above abstracts the complexity of dealing with the redux store. However, as our
+application grows, connecting to the store will become a repetitive task and, if repeated along
+across components, it will make our logic more complex and error prone.
+It is also a good practice to try and keep our React components as stateless as possible, e.g., our
+component above could have been as simple as:
+
+```javascript
+const View = ({ text }) => <div>{text}</div>;
+```
+
+That makes it easier to test it and to separate concerns as we can compose that component more
+easily.
+
+There are three key parts to our
+Let's go ahead and extract into its own set of reusable
+
+// extract into Provider and connect
+
+// show that we've just built react-redux
+
+
+  shouldComponentUpdate(nextProps, nextState) {
+    // whenever react detects either a change in props or state, it will 
+    return this.state !== nextState;
+  }
+

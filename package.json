@@ -3,10 +3,18 @@
   "version": "1.0.0",
   "description": "",
   "main": "basic.js",
-  "dependencies": {},
-  "devDependencies": {},
+  "dependencies": {
+    "react": "^15.1.0",
+    "react-dom": "^15.1.0"
+  },
+  "devDependencies": {
+    "browserify": "^13.0.1",
+    "buble": "^0.12.3",
+    "rollup-plugin-buble": "^0.12.1",
+    "rollupify": "^0.3.2"
+  },
   "scripts": {
-    "start": "rollup -c rollup.config.js basic.js | node"
+    "start": "browserify --transform [ rollupify --config rollup.config.js ] react/view.js > react/bundle.js | open react/index.html"
   },
   "author": "Darío Javier Cravero <dario@uxtemple.com>",
   "license": "MIT"
