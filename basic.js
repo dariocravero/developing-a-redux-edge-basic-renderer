@@ -23,11 +23,21 @@ function View(text) {
   console.log(`"${text}"`);
 }
 
+// keep track of the previous text, i.e., the text that was rendered on the last run
+let prevText;
 // let's abstract our rendering logic above into a rendering function that gathers data for a view
 // and renders it to the user
 function render() {
+  // get the text
   const text = store.getState();
-  View(text);
+
+  // compare them!
+  if (prevText !== text) {
+    // if it changed, save the new text for later reference
+    prevText = text;
+    // and render the changes
+    View(text);
+  }
 }
 
 // when the store's data changes we'll run our rendering function effectively turning it into a
@@ -61,4 +71,3 @@ const interval = setInterval(() => {
   }
   // do this every 0.25 seconds (or 250ms)
 }, 250);
-

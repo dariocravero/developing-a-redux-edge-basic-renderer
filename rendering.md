@@ -133,10 +133,15 @@ const interval = setInterval(() => {
 }, 250);
 ```
 
+Here's the output with the unnecessary re-renders flagged in green:
 
-In order to do so we'll need to keep track of data changes in order to determine whether we should
-render or not. Our render function seems like a great candidate for it since it already takes care
-of getting the data and rendering it. Let's refactor it then!
+[basic-output-repeated.jpg]
+
+Hopefully that example, despite its simplicity, can illustrate the re-rendering problem.
+In order to render the bare minimum we'll need to keep track of data changes to determine whether
+we should render or not.
+Our render function seems like a great candidate for it since it already takes care
+of getting the data and showing it. Let's refactor it to meet our needs then:
 
 ```javascript
 // keep track of the previous text, i.e., the text that was rendered on the last run
@@ -155,4 +160,5 @@ function render() {
 }
 ```
 
-To simulate this
+Our output should look exactly the same as it did before the introduction of an extra action being
+dispatched.
