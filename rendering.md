@@ -1,6 +1,6 @@
 ## Connecting redux to our UI
 
-We now have a way to understand how our app changes in a structured way, we need to display that
+Now that we have a way to understand how our app changes in a structured way, we need to display that
 somehow and interact with our user.
 
 To get started we will work with a very basic view engine that renders to `console.log` and we will
